@@ -6,24 +6,69 @@ export default function makeContacts() { return okResult(new Contacts()); }
 
 /** holds the contacts for different users */
 class Contacts {
+  #contactMap = new Map();
   //TODO: add instance fields if necessary
-  
   /** return an instance of UserContacts */
   userContacts(userId) {
     //TODO: fix to ensure same object returned for same userId
-    return okResult(new UserContacts(userId));
+    if(this.#contactMap.size === 0) {
+      let contact0 = okResult(new UserContacts(userId));
+      this.#contactMap.set(userId, contact0);
+      return this.#contactMap.get(userId);
+    }
+    else if(this.#contactMap.has(userId)) {
+      return this.#contactMap.get(userId);
+    } 
+    else {
+      let contactn = okResult(new UserContacts(userId));
+      this.#contactMap.set(userId, contactn);
+      return this.#contactMap.get(userId);
+    }
   }
-  
 }
 
 /** holds the contacts for single user specified by userId */
 class UserContacts {
   //TODO: add instance fields if necessary
+  #count;
+  #CidMap;
 
   constructor(userId) {
     this.userId = userId;
+    this.#count = 0;
+    this.#CidMap = new Map();
   }
   
+  //Aux functions
+  genID() {
+    let rand = Math.floor(Math.random() * 100); //0-99
+    return `${this.#count}_${rand}`;
+  }
+  
+  prefix(str) {
+    let arr = [];
+    const reg = new RegExp(/[\W_]+/g);
+    let index = 0;
+    for (let i = 0; i < str.length; i++) {
+      if(reg.test(str.charAt(i))) {
+        let newstr = str.substring(index, i);
+        let st = newstr.trim();
+        arr.push(st);
+        index = i+1;
+      }
+    }
+    let newArr = [];
+    for(let o of arr) {
+        if(o.length > 0) {
+            let index = 2;
+            while(index < o.length+1) {
+                newArr.push(o.substring(0, index));
+                index++;
+            }
+        }
+    }
+    return newArr;
+}
 
   /** Add object contact into this under a new contactId and return
    *  Result<contactId>.  The contact must have a name field which
@@ -37,7 +82,9 @@ class UserContacts {
    *             Contact contains an id property
    */
   create(contact) {
-    return okResult('TODO');
+    let ID = this.genID();
+    this.#CidMap.set(ID, contact);
+    return okResult(ID);
   }
 
   /** Return XContact for contactId.

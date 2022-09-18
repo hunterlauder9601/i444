@@ -2,7 +2,7 @@ import makeContacts from './contacts.mjs';
 import readline from 'readline';
 
 import { readJson } from 'cs544-node-utils';
-import { errResult, okResult } from 'cs544-js-utils';
+import { errResult, okResult, Result } from 'cs544-js-utils';
 
 import fs from 'fs';
 import Path from 'path';
@@ -68,7 +68,10 @@ async function doLine(userContacts, line, rl) {
     }
     else {
       const result = await cmd(userContacts, args[0], ...args.slice(1));
-      if (result.errors) {
+      if (!(result instanceof Result)) {
+	errors(errResult(`${args[0]} must return a Result type`));
+      }
+      else if (result.errors) {
 	errors(result);
       }
       else {
@@ -95,6 +98,7 @@ function help() {
   const msg =
     Object.values(CMDS).map(v => v.help.replace(/\s+$/, '')).join('\n');
   console.log('Allowed commands are:\n', msg, '\n');
+  return okResult('');
 }
 
 async function search(userContacts, _, ...args) {
@@ -108,8 +112,10 @@ async function search(userContacts, _, ...args) {
       params.email = arg;
     }
     else {
-      if (params.name) return errResult('only a single name may be specified');
-      params.name = arg;
+      if (params.nameWordPrefix) {
+	return errResult('only a single nameWordPrefix may be specified');
+      }
+      params.nameWordPrefix = arg;
     }
   }
   return userContacts.search(params, index, count);

@@ -86,8 +86,8 @@ describe('Contacts', () => {
   });
 
   it ('contacts search must search by first name word prefix', () => {
-    const name = 'que';
-    const contactsResult = userContacts.search({name});
+    const nameWordPrefix = 'que';
+    const contactsResult = userContacts.search({nameWordPrefix});
     expect(contactsResult.errors).to.be.undefined;
     const contacts = contactsResult.val
 	  .map(c => { const c1 = { ... c}; delete c1.id; return c1; });
@@ -95,8 +95,8 @@ describe('Contacts', () => {
   });
 
   it ('contacts search must search by last name word prefix', () => {
-    const name = 'go';
-    const contactsResult = userContacts.search({name});
+    const nameWordPrefix = 'go';
+    const contactsResult = userContacts.search({nameWordPrefix});
     expect(contactsResult.errors).to.be.undefined;
     const contacts = contactsResult.val
 	  .map(c => { const c1 = { ... c}; delete c1.id; return c1; });
@@ -104,8 +104,8 @@ describe('Contacts', () => {
   });
   
   it ('contacts search must retrieve multiple results', () => {
-    const name = 'john';
-    const contactsResult = userContacts.search({name});
+    const nameWordPrefix = 'john';
+    const contactsResult = userContacts.search({nameWordPrefix});
     expect(contactsResult.errors).to.be.undefined;
     const contacts = contactsResult.val
 	  .map(c => { const c1 = { ... c}; delete c1.id; return c1; });
@@ -122,11 +122,20 @@ describe('Contacts', () => {
 	  .map(c => { const c1 = { ... c}; delete c1.id; return c1; });
     expect(contacts).to.deep.equal(CONTACTS.slice(1, 2));
   });
-  
+    
+  it ('contacts search must search by id', () => {
+    const id = ids[3];
+    const contactsResult = userContacts.search({id});
+    expect(contactsResult.errors).to.be.undefined;
+    const contacts = contactsResult.val
+	  .map(c => { const c1 = { ... c}; delete c1.id; return c1; });
+    expect(contacts).to.deep.equal(CONTACTS.slice(3, 4));
+  });
+    
   it ('contacts case insensitive search by email and name word prefix', () => {
-    const name = 'QUE';
+    const nameWordPrefix = 'QUE';
     const email = 'QGORDON37@GMAIL.COM';
-    const contactsResult = userContacts.search({email, name});
+    const contactsResult = userContacts.search({email, nameWordPrefix});
     expect(contactsResult.errors).to.be.undefined;
     const contacts = contactsResult.val
 	  .map(c => { const c1 = { ... c}; delete c1.id; return c1; });
@@ -134,8 +143,8 @@ describe('Contacts', () => {
   });
   
   it ('contacts search with incorrect name prefix must return empty', () => {
-    const name = 'QUEN';
-    const contactsResult = userContacts.search({name});
+    const nameWordPrefix = 'QUEN';
+    const contactsResult = userContacts.search({nameWordPrefix});
     expect(contactsResult.errors).to.be.undefined;
     const contacts = contactsResult.val
     expect(contacts).to.have.lengthOf(0);

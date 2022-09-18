@@ -110,8 +110,8 @@ interface UserContacts {
 
   /** search for contact by zero or more of the following fields in params:
    *    id:     the contact ID.
-   *    name:   a string, the letters of which must match the prefix of a
-   *            word in the contacts name field
+   *    nameWordPrefix: a string, the letters of which must match 
+   *            the prefix of a word in the contacts name field
    *    email:  an Email address
    *  If no params are specified, then all contacts are returned
    *  
@@ -123,7 +123,7 @@ interface UserContacts {
    *             email is specified in params but does not contain a
    *             a valid Email address
    */
-  search(params?: {id?: ID, name?: string, email?: Email},
+  search(params?: {id?: ID, nameWordPrefix?: string, email?: Email},
 	 startIndex?: number, count?: number) : Result<XContact[]>;
   
 }

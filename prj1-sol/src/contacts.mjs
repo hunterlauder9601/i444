@@ -12,17 +12,17 @@ class Contacts {
   userContacts(userId) {
     //TODO: fix to ensure same object returned for same userId
     if(this.#contactMap.size === 0) {
-      let contact0 = okResult(new UserContacts(userId));
+      let contact0 = new UserContacts(userId);
       this.#contactMap.set(userId, contact0);
-      return this.#contactMap.get(userId);
+      return okResult(this.#contactMap.get(userId));
     }
     else if(this.#contactMap.has(userId)) {
-      return this.#contactMap.get(userId);
+      return okResult(this.#contactMap.get(userId));
     } 
     else {
-      let contactn = okResult(new UserContacts(userId));
+      let contactn = new UserContacts(userId);
       this.#contactMap.set(userId, contactn);
-      return this.#contactMap.get(userId);
+      return okResult(this.#contactMap.get(userId));
     }
   }
 }
@@ -42,9 +42,9 @@ class UserContacts {
   //Aux functions
   genID() {
     let rand = Math.floor(Math.random() * 100); //0-99
-    return `${this.#count}_${rand}`;
+    return `${this.#count++}_${rand}`;
   }
-  
+
   prefix(str) {
     let arr = [];
     const reg = new RegExp(/[\W_]+/g);
@@ -55,6 +55,10 @@ class UserContacts {
         let st = newstr.trim();
         arr.push(st);
         index = i+1;
+      } else if(i === str.length-1) {
+        let newstr = str.substring(index, i+1);
+        let st = newstr.trim();
+        arr.push(st);
       }
     }
     let newArr = [];
@@ -62,13 +66,17 @@ class UserContacts {
         if(o.length > 0) {
             let index = 2;
             while(index < o.length+1) {
-                newArr.push(o.substring(0, index));
+                newArr.push(o.substring(0, index).toLowerCase());
                 index++;
             }
         }
     }
     return newArr;
 }
+
+  deepCopy(contact) {
+    return JSON.parse(JSON.stringify(contact));
+  }
 
   /** Add object contact into this under a new contactId and return
    *  Result<contactId>.  The contact must have a name field which
@@ -82,6 +90,20 @@ class UserContacts {
    *             Contact contains an id property
    */
   create(contact) {
+    if(this.prefix(contact.name).length === 0 || contact.id !== undefined) {
+      return errResult('BAD_REQ', {code: 'BAD_REQ'});
+    }
+    const reg = new RegExp(/^.+?\@.+?\..+$/);
+    if(contact.hasOwnProperty("emails")) {
+      if(!Array.isArray(contact.emails)) {
+        return errResult('BAD_REQ', {code: 'BAD_REQ'});
+      }
+      for(let o of contact.emails) {
+        if(!reg.test(o)) {
+          return errResult('BAD_REQ', {code: 'BAD_REQ'});
+        }
+      }
+    }
     let ID = this.genID();
     this.#CidMap.set(ID, contact);
     return okResult(ID);
@@ -95,7 +117,13 @@ class UserContacts {
    *    NOT_FOUND: no contact for contactId
    */
   read(contactId) {
-    return okResult('TODO');
+    if(typeof contactId !== 'string') {
+      return errResult('BAD_REQ', {code: 'BAD_REQ'});
+    } else if(this.#CidMap.has(contactId)) {
+      return okResult(this.deepCopy(this.#CidMap.get(contactId)));
+    } else {
+      return errResult('NOT_FOUND', {code: 'NOT_FOUND'});
+    }
   }
 
   /** search for contact by zero or more of the following fields in params:
@@ -114,7 +142,67 @@ class UserContacts {
    *             a valid Email address
    */
   search({id, nameWordPrefix, email}={}, startIndex=0, count=5) {
-    return okResults(['TODO']);
+    console.log(id);
+    console.log(nameWordPrefix);
+    console.log(email);
+
+    let nameSet = new Set();
+    let emailSet = new Set();
+    let singleSet = new Set();
+    let finalSet = new Set();
+
+    if(typeof nameWordPrefix === 'undefined' && typeof email === 'undefined' && typeof id === 'undefined') {
+      for(let k of this.#CidMap.keys()) {
+        finalSet.add(k);
+      }
+    }
+    if(typeof nameWordPrefix !== 'undefined') {
+      if(this.prefix(nameWordPrefix).length === 0) {
+        return errResult('BAD_REQ', {code: 'BAD_REQ'});
+      }
+      for(let k of this.#CidMap.keys()) {
+        let temp = this.prefix(this.#CidMap.get(k).name);
+        if(temp.indexOf(nameWordPrefix.toLowerCase()) !== -1) {
+          nameSet.add(k);
+        }
+      }
+    }
+    if(typeof email !== 'undefined') {
+      let lcEmail = email.toLowerCase();
+      for(let k of this.#CidMap.keys()) {
+        let emailArr = this.#CidMap.get(k).emails;
+        if(typeof emailArr === 'undefined') {
+          continue;
+        }
+        for(let i of emailArr) {
+          if(i.toLowerCase() === lcEmail) {
+            emailSet.add(k);
+          }
+        }
+
+      }
+    }
+    if(typeof id !== 'undefined') {
+      singleSet.add(id);
+    }
+    let arr = [nameSet, emailSet, singleSet];
+    let check = true;
+    for(let o of arr) {
+      if(o.size !== 0 && check) {
+        check = false;
+        finalSet = setUnion(finalSet, o);
+      } else if(o.size !== 0) {
+        finalSet = setIntersection(finalSet, o);
+      }
+    }
+    let idArray = Array.from(finalSet).slice(startIndex, startIndex+count);
+    let contactArray = [];
+    let x = 0;
+    for(let i of idArray) {
+      contactArray[x] = this.deepCopy(this.#CidMap.get(i));
+      x++;
+    }
+    return okResult(contactArray);
   }
 
   //TODO: define auxiliary methods

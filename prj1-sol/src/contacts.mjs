@@ -27,56 +27,79 @@ class Contacts {
   }
 }
 
+class Index {
+  #prefixMap;
+  #emailMap;
+
+  constructor() {
+    this.#prefixMap = new Map();
+    this.#emailMap = new Map();
+  }
+
+  setPrefixMap(prefix, id) {
+    if(this.#prefixMap.has(prefix)) {
+      let set = this.#prefixMap.get(prefix);
+      set.add(id);
+      this.#prefixMap.set(prefix, set);
+    } else {
+      let newSet = new Set();
+      newSet.add(id);
+      this.#prefixMap.set(prefix, newSet);
+    }
+
+    // for(let i of this.#idMap.keys()) {
+    //   console.log(i); //test
+    // }
+    // for(let k of this.#idMap.keys()) {
+    //   let arr = prefix(this.#idMap.get(k).name);
+    //   for(let i of arr) {
+    //     this.#prefixMap.set(i, k);
+    //   }
+    // }
+    // return this.#prefixMap;
+  }
+
+  setEmailMap(email, id) {
+    this.#emailMap.set(email, id);
+  }
+  //   for(let k of this.#idMap.keys()) {
+  //     let emailArr = this.#idMap.get(k).emails;
+  //     if(typeof emailArr === 'undefined') {
+  //       continue;
+  //     }
+  //     for(let i of emailArr) {
+  //       this.#emailMap.set(i, k);
+  //     }
+  //   }
+  //   return this.#emailMap;
+  // }
+
+  getPrefixID(prefix) {
+    if(this.#prefixMap.has(prefix)) {
+      return this.#prefixMap.get(prefix); //returns set of IDS
+    }
+  }
+  getEmailID(email) {
+    if(this.#emailMap.has(email)) {
+      return this.#emailMap.get(email); // returns single ID
+    }
+  }
+}
+
 /** holds the contacts for single user specified by userId */
 class UserContacts {
   //TODO: add instance fields if necessary
   #count;
   #CidMap;
+  #index;
 
   constructor(userId) {
     this.userId = userId;
     this.#count = 0;
     this.#CidMap = new Map();
+    this.#index = new Index();
   }
   
-  //Aux functions
-  genID() {
-    let rand = Math.floor(Math.random() * 100); //0-99
-    return `${this.#count++}_${rand}`;
-  }
-
-  prefix(str) {
-    let arr = [];
-    const reg = new RegExp(/[\W_]+/g);
-    let index = 0;
-    for (let i = 0; i < str.length; i++) {
-      if(reg.test(str.charAt(i))) {
-        let newstr = str.substring(index, i);
-        let st = newstr.trim();
-        arr.push(st);
-        index = i+1;
-      } else if(i === str.length-1) {
-        let newstr = str.substring(index, i+1);
-        let st = newstr.trim();
-        arr.push(st);
-      }
-    }
-    let newArr = [];
-    for(let o of arr) {
-        if(o.length > 0) {
-            let index = 2;
-            while(index < o.length+1) {
-                newArr.push(o.substring(0, index).toLowerCase());
-                index++;
-            }
-        }
-    }
-    return newArr;
-}
-
-  deepCopy(contact) {
-    return JSON.parse(JSON.stringify(contact));
-  }
 
   /** Add object contact into this under a new contactId and return
    *  Result<contactId>.  The contact must have a name field which
@@ -90,10 +113,11 @@ class UserContacts {
    *             Contact contains an id property
    */
   create(contact) {
-    if(this.prefix(contact.name).length === 0 || contact.id !== undefined) {
+    if(prefix(contact.name).length === 0 || contact.id !== undefined) {
       return errResult('BAD_REQ', {code: 'BAD_REQ'});
     }
     const reg = new RegExp(/^.+?\@.+?\..+$/);
+    let ID = this.genID();
     if(contact.hasOwnProperty("emails")) {
       if(!Array.isArray(contact.emails)) {
         return errResult('BAD_REQ', {code: 'BAD_REQ'});
@@ -101,10 +125,15 @@ class UserContacts {
       for(let o of contact.emails) {
         if(!reg.test(o)) {
           return errResult('BAD_REQ', {code: 'BAD_REQ'});
+        } else {
+          this.#index.setEmailMap(o, ID);
         }
       }
+      let pArr = prefix(contact.name);
+      for(let i of pArr) {
+        this.#index.setPrefixMap(i, ID);
+      }
     }
-    let ID = this.genID();
     this.#CidMap.set(ID, contact);
     return okResult(ID);
   }
@@ -157,30 +186,20 @@ class UserContacts {
       }
     }
     if(typeof nameWordPrefix !== 'undefined') {
-      if(this.prefix(nameWordPrefix).length === 0) {
+      if(prefix(nameWordPrefix).length === 0) {
         return errResult('BAD_REQ', {code: 'BAD_REQ'});
       }
-      for(let k of this.#CidMap.keys()) {
-        let temp = this.prefix(this.#CidMap.get(k).name);
-        if(temp.indexOf(nameWordPrefix.toLowerCase()) !== -1) {
-          nameSet.add(k);
-        }
-      }
+      let IDset = this.#index.getPrefixID(nameWordPrefix);
+      nameSet = setUnion(IDset, nameSet);
     }
     if(typeof email !== 'undefined') {
-      let lcEmail = email.toLowerCase();
-      for(let k of this.#CidMap.keys()) {
-        let emailArr = this.#CidMap.get(k).emails;
-        if(typeof emailArr === 'undefined') {
-          continue;
-        }
-        for(let i of emailArr) {
-          if(i.toLowerCase() === lcEmail) {
-            emailSet.add(k);
-          }
-        }
-
+      const reg = new RegExp(/^.+?\@.+?\..+$/);
+      if(!reg.test(email)) {
+        return errResult('BAD_REQ', {code: 'BAD_REQ'});
       }
+      let lcEmail = email.toLowerCase();
+      let ID = this.#index.getEmailID(lcEmail);
+      emailSet.add(ID);
     }
     if(typeof id !== 'undefined') {
       singleSet.add(id);
@@ -205,12 +224,53 @@ class UserContacts {
     return okResult(contactArray);
   }
 
+  genID() {
+    let rand = Math.floor(Math.random() * 100); //0-99
+    return `${this.#count++}_${rand}`;
+  }
+
+  deepCopy(contact) {
+    return JSON.parse(JSON.stringify(contact));
+  }
+
   //TODO: define auxiliary methods
 
 }
 
 
 //TODO: define auxiliary functions and classes.
+
+  function prefix(str) {
+    let arr = [];
+    const reg = new RegExp(/[\W_]+/g);
+    let index = 0;
+    for (let i = 0; i < str.length; i++) {
+      if(reg.test(str.charAt(i))) {
+        let newstr = str.substring(index, i);
+        let st = newstr.trim();
+        arr.push(st);
+        index = i+1;
+      } else if(i === str.length-1) {
+        let newstr = str.substring(index, i+1);
+        let st = newstr.trim();
+        arr.push(st);
+      }
+    }
+    let newArr = [];
+    for(let o of arr) {
+        if(o.length > 0) {
+            let index = 2;
+            while(index < o.length+1) {
+                newArr.push(o.substring(0, index).toLowerCase());
+                index++;
+            }
+        }
+    }
+    return newArr;
+}
+
+
+
 
 // non-destructive implementations of set operations which may be useful
 function setIntersection(setA, setB) {
@@ -226,4 +286,3 @@ function setUnion(setA, setB) {
   for (const el of setB) result.add(el);
   return result;
 }
-

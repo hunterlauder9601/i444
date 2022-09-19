@@ -46,33 +46,11 @@ class Index {
       newSet.add(id);
       this.#prefixMap.set(prefix, newSet);
     }
-
-    // for(let i of this.#idMap.keys()) {
-    //   console.log(i); //test
-    // }
-    // for(let k of this.#idMap.keys()) {
-    //   let arr = prefix(this.#idMap.get(k).name);
-    //   for(let i of arr) {
-    //     this.#prefixMap.set(i, k);
-    //   }
-    // }
-    // return this.#prefixMap;
   }
 
   setEmailMap(email, id) {
     this.#emailMap.set(email, id);
   }
-  //   for(let k of this.#idMap.keys()) {
-  //     let emailArr = this.#idMap.get(k).emails;
-  //     if(typeof emailArr === 'undefined') {
-  //       continue;
-  //     }
-  //     for(let i of emailArr) {
-  //       this.#emailMap.set(i, k);
-  //     }
-  //   }
-  //   return this.#emailMap;
-  // }
 
   getPrefixID(prefix) {
     if(this.#prefixMap.has(prefix)) {
@@ -171,10 +149,6 @@ class UserContacts {
    *             a valid Email address
    */
   search({id, nameWordPrefix, email}={}, startIndex=0, count=5) {
-    console.log(id);
-    console.log(nameWordPrefix);
-    console.log(email);
-
     let nameSet = new Set();
     let emailSet = new Set();
     let singleSet = new Set();

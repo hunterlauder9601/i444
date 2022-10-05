@@ -14,6 +14,8 @@ export default async function makeContactsDao(dbUrl) {
 }
 
 const DEFAULT_COUNT = 5;
+const NEXT_ID_KEY = 'count';
+const RAND_LEN = 2;
 
 /** holds the contacts for multiple users. All request methods
  *  should assume that their single parameter has been validated
@@ -23,7 +25,19 @@ const DEFAULT_COUNT = 5;
  */
 class ContactsDao {
   constructor(params) {
-    //TODO
+    Object.assign(this, params);
+  }
+
+    // Returns a unique, difficult to guess id.
+  async #nextId() {
+    const query = { _id: NEXT_ID_KEY };
+    const update = { $inc: { [NEXT_ID_KEY]: 1 } };
+    const options = { upsert: true, returnDocument: 'after' };
+    const ret =
+      await this.id_gen.findOneAndUpdate(query, update, options);
+    const seq = ret.value[NEXT_ID_KEY];
+    return String(seq)
+      + Math.random().toFixed(RAND_LEN).replace(/^0\./, '_');
   }
 
   /** Factory method to create a new instance of this 
@@ -31,9 +45,30 @@ class ContactsDao {
    *    DB: a database error was encountered.
    */
   static async make(dbUrl) {
-    //TODO any setup code
+    const params = {};
     try {
-      return errResult('TODO', { code: 'TODO' });
+      params._client = await (new MongoClient(dbUrl)).connect();
+      const db = params._client.db();
+      const collections = await (db.listCollections().toArray());
+      const exists = !!collections.find(c => c.name === "USER-CONTACT");
+      const options = {collation: {locale: 'en', strength: 2, }};
+      let col;
+      if(!exists) {
+        col = await db.createCollection("USER-CONTACT", options);
+      } else {
+        col = db.collection("USER-CONTACT");
+      }
+      const ID_exists = !!collections.find(c => c.name === "ID_GEN_COLL");
+      let col2;
+      if(!ID_exists) {
+        col2 = await db.createCollection("ID_GEN_COLL", options);
+      } else {
+        col2 = db.collection("ID_GEN_COLL");
+      }
+      await col.createIndex({id: 1});
+      params.collection = col;
+      params.id_gen = col2;
+      return okResult(new ContactsDao(params));
     }
     catch (error) {
       console.error(error);
@@ -51,7 +86,7 @@ class ContactsDao {
   async close() { 
     //TODO any setup code
     try {
-      return errResult('TODO', { code: 'TODO' });
+      await this._client.close();
     }
     catch (e) {
       console.error(e);
@@ -68,7 +103,10 @@ class ContactsDao {
   async clearAll() {
     //TODO any setup code
     try {
-      return errResult('TODO', { code: 'TODO' });
+      const num = await this.collection.countDocuments();
+      await this.collection.deleteMany({});
+      await this.id_gen.deleteMany({});
+      return okResult(num);
     }
     catch (error) {
       console.error(error);
@@ -83,7 +121,9 @@ class ContactsDao {
   async clear({userId}) {
     //TODO any setup code
     try {
-      return errResult('TODO', { code: 'TODO' });
+      const num = await this.collection.countDocuments({userId: userId});
+      await this.collection.deleteMany({userId: userId});
+      return okResult(num);
     }
     catch (error) {
       console.error(error);
@@ -103,9 +143,30 @@ class ContactsDao {
    *    DB: a database error occurred   
    */
   async create(contact) {
-    //TODO any setup code
     try {
-      return errResult('TODO', { code: 'TODO' });
+      const collection = this.collection;
+      if(contact.hasOwnProperty('_id')) {
+        return errResult("contact contains an _id property", {code: 'BAD_REQ'});
+      }
+      const prefixes = namePrefixes(contact.name);
+      if(prefixes.length === 0) {
+        return errResult("contact name does not have a prefix-able name", {code: 'BAD_REQ'});
+      }
+      const {emails} = contact;
+      const pair_Id = await this.#nextId();
+      const dbObj = { id: pair_Id, ...contact };
+      if(emails !== undefined && emails.length !== 0) {
+        for(let i of emails) {
+          i = i.toLowerCase();
+        }
+        dbObj.emails = emails;
+      }
+      Object.defineProperty(dbObj, "prefixes", {
+        enumerable : false,
+        value : prefixes
+      });
+      await collection.insertOne(dbObj);
+      return okResult(pair_Id);
     }
     catch (error) {
       console.error(error);
@@ -122,7 +183,15 @@ class ContactsDao {
   async read({userId, id}) {
     //TODO any setup code
     try {
-      return errResult('TODO', { code: 'TODO' });
+      const collection = this.collection;
+      const result = await collection.findOne({id: id, userId: userId});
+      if(result !== null) {
+        delete result._id;
+        return okResult(result);
+        
+      } else {
+        return errResult("no contact for contactId id", { code: 'NOT_FOUND' });
+      }
     }
     catch (error) {
       console.error(error);
@@ -146,8 +215,44 @@ class ContactsDao {
    *    DB: a database error occurred   
    */
   async search({userId, id, prefix, email, index=0, count=DEFAULT_COUNT}={}) {
-    //TODO any setup code
     try {
+      const collection = this.collection;
+      if(id === undefined && prefix === undefined && email === undefined) {
+        const cursor = await collection.find({userId: userId}).project({_id: 0});
+        const results = await cursor.sort({name: 1}).toArray();
+        return okResult(results.slice(index, index+count));
+        
+      } else if(id !== undefined && prefix !== undefined && email === undefined) {
+        const cursor = await collection.find({userId: userId, id: id, prefixes: {$in: [prefix.toLowerCase()]}}).project({_id: 0});
+        const results = await cursor.sort({name: 1}).toArray();
+        return okResult(results.slice(index, index+count));
+        
+      } else if(id === undefined && prefix !== undefined && email !== undefined) {
+        const cursor = await collection.find({userId: userId, emails: {$in: [email.toLowerCase()]}, prefixes: {$in: [prefix.toLowerCase()]}}).project({_id: 0});
+        const results = await cursor.sort({name: 1}).toArray();
+        return okResult(results.slice(index, index+count));
+        
+      } else if(id !== undefined && prefix !== undefined && email !== undefined) {
+        const cursor = await collection.find({userId: userId, id: id, emails: {$in: [email.toLowerCase()]}, prefixes: {$in: [prefix.toLowerCase()]}}).project({_id: 0});
+        const results = await cursor.sort({name: 1}).toArray();
+        return okResult(results.slice(index, index+count));
+        
+      } else if(id !== undefined && prefix === undefined && email === undefined) {
+        const cursor = await collection.find({userId: userId, id: id}).project({_id: 0});
+        const results = await cursor.sort({name: 1}).toArray();
+        return okResult(results.slice(index, index+count));
+        
+      } else if(id === undefined && prefix !== undefined && email === undefined) {
+        const cursor = await collection.find({userId: userId, prefixes: {$in: [prefix.toLowerCase()]}}).project({_id: 0});
+        const results = await cursor.sort({name: 1}).toArray();
+        return okResult(results.slice(index, index+count));
+        
+      } else if(id === undefined && prefix === undefined && email !== undefined) {
+        const cursor = await collection.find({userId: userId, emails: {$in: [email.toLowerCase()]}}).project({_id: 0});
+        const results = await cursor.sort({name: 1}).toArray();
+        return okResult(results.slice(index, index+count));
+      }
+    
       return errResult('TODO', { code: 'TODO' });
     }
     catch (error) {

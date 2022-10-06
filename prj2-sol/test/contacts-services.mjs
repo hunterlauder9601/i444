@@ -94,11 +94,20 @@ describe('Contacts services', () => {
     });
     
     it ('read contact with bad userId must error NOT_FOUND', async () => {
-      expect('TODO').to.be.undefined;
+		const badUserId = USER_IDS[0] + 'x';
+		for(const id of userContactIds[USER_IDS[0]]) {
+			const contactResult = await services.read({userId: badUserId, id: id});
+			expect(contactResult.errors).to.not.be.undefined;
+			expect(contactResult.errors[0].options.code).to.equal('NOT_FOUND');
+		}
     });
     
     it ('creating contact with _id property must error BAD_REQ', async () => {
-      expect('TODO').to.be.undefined;
+		const user_id = USER_IDS[0];
+	    const contact = CONTACTS[0];
+		const idResult = await services.create({_id: "test", userId: user_id, ...contact});
+		expect(idResult.errors).to.not.be.undefined;
+		expect(idResult.errors[0].options.code).to.equal('BAD_REQ');
     });
 
     it ('search without options must retrieve all contacts', async () => {

@@ -186,7 +186,7 @@ class ContactsDao {
         delete result.prefixes;
         return okResult(result);
       } else {
-        return errResult("no contact for contactId id", { code: 'NOT_FOUND' });
+        return errResult("no contact for contactId id given the userId", { code: 'NOT_FOUND' });
       }
     }
     catch (error) {

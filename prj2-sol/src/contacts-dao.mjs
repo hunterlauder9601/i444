@@ -50,13 +50,13 @@ class ContactsDao {
       params._client = await (new MongoClient(dbUrl)).connect();
       const db = params._client.db();
       const collections = await (db.listCollections().toArray());
-      const exists = !!collections.find(c => c.name === "USER-CONTACT");
+      const exists = !!collections.find(c => c.name === "USER_CONTACT");
       const options = {collation: {locale: 'en', strength: 2, }};
       let col;
       if(!exists) {
-        col = await db.createCollection("USER-CONTACT", options);
+        col = await db.createCollection("USER_CONTACT", options);
       } else {
-        col = db.collection("USER-CONTACT");
+        col = db.collection("USER_CONTACT");
       }
       const ID_exists = !!collections.find(c => c.name === "ID_GEN_COLL");
       let col2;
@@ -152,15 +152,15 @@ class ContactsDao {
       if(prefixes.length === 0) {
         return errResult("contact name does not have a prefix-able name", {code: 'BAD_REQ'});
       }
-      const {emails} = contact;
+      //const {emails} = contact;
       const pair_Id = await this.#nextId();
       const dbObj = { id: pair_Id, prefixes: prefixes, ...contact };
-      if(emails !== undefined && emails.length !== 0) {
-        for(let i of emails) {
-          i = i.toLowerCase();
-        }
-        dbObj.emails = emails;
-      }
+      // if(emails !== undefined && emails.length !== 0) {
+      //   for(let i of emails) {
+      //     i = i.toLowerCase();
+      //   }
+      //   dbObj.emails = emails;
+      // }
       await collection.insertOne(dbObj);
       return okResult(pair_Id);
     }
@@ -219,17 +219,17 @@ class ContactsDao {
         return okResult(results.slice(index, index+count));
         
       } else if(id !== undefined && prefix !== undefined && email === undefined) {
-        const cursor = await collection.find({userId: userId, id: id, prefixes: {$in: [prefix.toLowerCase()]}}).project({_id: 0, prefixes: 0});
+        const cursor = await collection.find({userId: userId, id: id, prefixes: {$in: [prefix]}}).project({_id: 0, prefixes: 0});
         const results = await cursor.sort({name: 1}).toArray();
         return okResult(results.slice(index, index+count));
         
       } else if(id === undefined && prefix !== undefined && email !== undefined) {
-        const cursor = await collection.find({userId: userId, emails: {$in: [email.toLowerCase()]}, prefixes: {$in: [prefix.toLowerCase()]}}).project({_id: 0, prefixes: 0});
+        const cursor = await collection.find({userId: userId, emails: {$in: [email]}, prefixes: {$in: [prefix]}}).project({_id: 0, prefixes: 0});
         const results = await cursor.sort({name: 1}).toArray();
         return okResult(results.slice(index, index+count));
         
       } else if(id !== undefined && prefix !== undefined && email !== undefined) {
-        const cursor = await collection.find({userId: userId, id: id, emails: {$in: [email.toLowerCase()]}, prefixes: {$in: [prefix.toLowerCase()]}}).project({_id: 0, prefixes: 0});
+        const cursor = await collection.find({userId: userId, id: id, emails: {$in: [email]}, prefixes: {$in: [prefix]}}).project({_id: 0, prefixes: 0});
         const results = await cursor.sort({name: 1}).toArray();
         return okResult(results.slice(index, index+count));
         
@@ -239,12 +239,12 @@ class ContactsDao {
         return okResult(results.slice(index, index+count));
         
       } else if(id === undefined && prefix !== undefined && email === undefined) {
-        const cursor = await collection.find({userId: userId, prefixes: {$in: [prefix.toLowerCase()]}}).project({_id: 0, prefixes: 0});
+        const cursor = await collection.find({userId: userId, prefixes: {$in: [prefix]}}).project({_id: 0, prefixes: 0});
         const results = await cursor.sort({name: 1}).toArray();
         return okResult(results.slice(index, index+count));
         
       } else if(id === undefined && prefix === undefined && email !== undefined) {
-        const cursor = await collection.find({userId: userId, emails: {$in: [email.toLowerCase()]}}).project({_id: 0, prefixes: 0});
+        const cursor = await collection.find({userId: userId, emails: {$in: [email]}}).project({_id: 0, prefixes: 0});
         const results = await cursor.sort({name: 1}).toArray();
         return okResult(results.slice(index, index+count));
       }

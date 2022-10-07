@@ -95,11 +95,10 @@ describe('Contacts services', () => {
     
     it ('read contact with bad userId must error NOT_FOUND', async () => {
 		const badUserId = USER_IDS[0] + 'x';
-		for(const id of userContactIds[USER_IDS[0]]) {
-			const contactResult = await services.read({userId: badUserId, id: id});
-			expect(contactResult.errors).to.not.be.undefined;
-			expect(contactResult.errors[0].options.code).to.equal('NOT_FOUND');
-		}
+		const id = userContactIds[USER_IDS[0]][0];
+		const contactResult = await services.read({userId: badUserId, id: id});
+		expect(contactResult.errors).to.not.be.undefined;
+		expect(contactResult.errors[0].options.code).to.equal('NOT_FOUND');
     });
     
     it ('creating contact with _id property must error BAD_REQ', async () => {

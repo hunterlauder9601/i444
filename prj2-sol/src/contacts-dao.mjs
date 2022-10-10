@@ -65,7 +65,7 @@ class ContactsDao {
       } else {
         col2 = db.collection("ID_GEN_COLL");
       }
-      await col.createIndex({id: 1});
+      await col.createIndex([{id: 1}, {prefixes: -1}, {userId: 1}]);
       params.collection = col;
       params.id_gen = col2;
       return okResult(new ContactsDao(params));
@@ -215,38 +215,43 @@ class ContactsDao {
       const collection = this.collection;
       if(id === undefined && prefix === undefined && email === undefined) {
         const cursor = await collection.find({userId: userId}).project({_id: 0, prefixes: 0});
-        const results = await cursor.sort({name: 1}).toArray();
-        return okResult(results.slice(index, index+count));
+        const results = await cursor.sort({name: 1}).skip(index).limit(count).toArray();
+        return okResult(results);
         
       } else if(id !== undefined && prefix !== undefined && email === undefined) {
         const cursor = await collection.find({userId: userId, id: id, prefixes: {$in: [prefix]}}).project({_id: 0, prefixes: 0});
-        const results = await cursor.sort({name: 1}).toArray();
-        return okResult(results.slice(index, index+count));
+        const results = await cursor.sort({name: 1}).skip(index).limit(count).toArray();
+        return okResult(results);
         
       } else if(id === undefined && prefix !== undefined && email !== undefined) {
         const cursor = await collection.find({userId: userId, emails: {$in: [email]}, prefixes: {$in: [prefix]}}).project({_id: 0, prefixes: 0});
-        const results = await cursor.sort({name: 1}).toArray();
-        return okResult(results.slice(index, index+count));
+        const results = await cursor.sort({name: 1}).skip(index).limit(count).toArray();
+        return okResult(results);
         
+      } else if(id !== undefined && prefix === undefined && email !== undefined) {
+        const cursor = await collection.find({userId: userId, id: id, emails: {$in: [email]}}).project({_id: 0, prefixes: 0});
+        const results = await cursor.sort({name: 1}).skip(index).limit(count).toArray();
+        return okResult(results);
+
       } else if(id !== undefined && prefix !== undefined && email !== undefined) {
         const cursor = await collection.find({userId: userId, id: id, emails: {$in: [email]}, prefixes: {$in: [prefix]}}).project({_id: 0, prefixes: 0});
-        const results = await cursor.sort({name: 1}).toArray();
-        return okResult(results.slice(index, index+count));
+        const results = await cursor.sort({name: 1}).skip(index).limit(count).toArray();
+        return okResult(results);
         
       } else if(id !== undefined && prefix === undefined && email === undefined) {
         const cursor = await collection.find({userId: userId, id: id}).project({_id: 0, prefixes: 0});
-        const results = await cursor.sort({name: 1}).toArray();
-        return okResult(results.slice(index, index+count));
+        const results = await cursor.sort({name: 1}).skip(index).limit(count).toArray();
+        return okResult(results);
         
       } else if(id === undefined && prefix !== undefined && email === undefined) {
         const cursor = await collection.find({userId: userId, prefixes: {$in: [prefix]}}).project({_id: 0, prefixes: 0});
-        const results = await cursor.sort({name: 1}).toArray();
-        return okResult(results.slice(index, index+count));
+        const results = await cursor.sort({name: 1}).skip(index).limit(count).toArray();
+        return okResult(results);
         
       } else if(id === undefined && prefix === undefined && email !== undefined) {
         const cursor = await collection.find({userId: userId, emails: {$in: [email]}}).project({_id: 0, prefixes: 0});
-        const results = await cursor.sort({name: 1}).toArray();
-        return okResult(results.slice(index, index+count));
+        const results = await cursor.sort({name: 1}).skip(index).limit(count).toArray();
+        return okResult(results);
       }
     }
     catch (error) {

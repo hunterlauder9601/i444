@@ -65,7 +65,7 @@ class ContactsDao {
       } else {
         col2 = db.collection("ID_GEN_COLL");
       }
-      await col.createIndex([{id: 1}, {prefixes: -1}, {userId: 1}]);
+      await col.createIndex(['id', 'prefixes', 'userId']);
       params.collection = col;
       params.id_gen = col2;
       return okResult(new ContactsDao(params));

@@ -65,7 +65,10 @@ class ContactsDao {
       } else {
         col2 = db.collection("ID_GEN_COLL");
       }
-      await col.createIndex(['id', 'prefixes', 'userId']);
+      await col.createIndex('prefixes');
+      await col.createIndex('emails');
+      await col.createIndex('userId');
+      await col.createIndex('id'); //mongo can do index intersection
       params.collection = col;
       params.id_gen = col2;
       return okResult(new ContactsDao(params));

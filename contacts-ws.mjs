@@ -25,14 +25,10 @@ function setupRoutes(app) {
   const base = app.locals.base;
   app.use(cors({ exposedHeaders: [ 'Location' ]}));
   app.use(bodyParser.json());
-  //create contact
-  app.post(`${base}/:USER_ID`, createContact(app));
-  //read contact
+  //create user
+  app.post(`${base}/:USER_ID`, doRegisterUser(app));
+  //read user
   app.get(`${base}/:USER_ID/:CONTACT_ID`, readContact(app));
-  //delete contact
-  app.delete(`${base}/:USER_ID/:CONTACT_ID`, deleteContact(app));
-  //update contact
-  app.patch(`${base}/:USER_ID/:CONTACT_ID`, updateContact(app));
   if (true) { //make true to see incoming requests
     app.use((req, res, next) => {
       console.log(req.method, requestUrl(req));
@@ -60,11 +56,16 @@ function setupRoutes(app) {
 function readContact(app) {
   return (async function(req, res) {
     try {
-      const result = await app.locals.model.read({userId: req.params.USER_ID, id: req.params.CONTACT_ID});
+      const obj = {userId: req.params.USER_ID, id: req.params.CONTACT_ID}
+      console.log(obj);
+      const result = await app.locals.model.read(obj);
+      if(result === undefined) {
+        do404(app);
+      }
       if (result.errors) throw result;
-      const { userId, id} = result.val;
-      //res.location(`${userId}/${id}`);
-      const selfLink = addSelfLinks(req, result.val);
+      const { userId } = result.val;
+      res.location(userId);
+      const selfLink = addSelfLinks(req, result.val, result.val.id);
       res.json(selfLink);
     }
     catch(err) {
@@ -99,17 +100,17 @@ function readContact(app) {
 // The request will create a new contact for user USER_ID. If successful, the response will be empty with status 201 CREATED. The Location header must be set to the URL for the newly created contact.
 
 
-function createContact(app) {
+function doRegisterUser(app) {
   return (async function(req, res) {
     try {
       const userInfo = req.body;
       userInfo.userId = req.params.USER_ID;
       const result = await app.locals.model.create(userInfo);
-      if (result.errors) throw result;
+      if (result.hasErrors) throw result;
       userInfo.id = result.val;
-      const selfLink = addSelfLinks(req, userInfo, 'id');
+      const selfLink = addSelfLinks(req, userInfo, userInfo.id);
       res.location(selfLink.links[0].href);
-      res.status(STATUS.CREATED).end();
+      res.status(201).end();
     }
     catch(err) {
       const mapped = mapResultErrors(err);
@@ -125,50 +126,11 @@ function createContact(app) {
 // The request will update contact CONTACT_ID for user USER_ID with the fields specifed in the JSON body. If successful, the response will contain the updated contact.
 
 // If there is no contact having id CONTACT_ID for user USER_ID, then the response should be a 404 error.
-function updateContact(app) {
-  return (async function(req, res) {
-    try {
-      const contact = await app.locals.model.read({userId: req.params.USER_ID, id: req.params.CONTACT_ID});
-      if (contact.errors) throw contact;
-      console.log(req.body);
-      const {name, emails, addr, phones, notes, info} = req.body;
-      const updates = {name, emails, addr, phones, notes, info};
-      const newContact = {...contact.val};
-      for(const prop in updates) {
-        if(updates[prop] !== undefined) {
-          newContact[prop] = updates[prop];
-        }
-      }
-      const result = await app.locals.model.update(newContact);
-      if (result.errors) throw result;
-      res.json(addSelfLinks(req, result.val));
-    }
-    catch(err) {
-      const mapped = mapResultErrors(err);
-      res.status(mapped.status).json(mapped);
-    }
-  });
-}
-
-
 
 // DELETE /contacts/USER_ID/CONTACT_ID
 // The request will delete contact CONTACT_ID for user USER_ID. If successful, the response will return with a NO_CONTENT HTTP status.
 
 // If there is no contact having id CONTACT_ID for user USER_ID, then the response should be a 404 error.
-function deleteContact(app) {
-  return (async function(req, res) {
-    try {
-      const result = await app.locals.model.delete({userId: req.params.USER_ID, id: req.params.CONTACT_ID});
-      if (result.errors) throw result;
-      res.status(STATUS.NO_CONTENT).end();
-    }
-    catch(err) {
-      const mapped = mapResultErrors(err);
-      res.status(mapped.status).json(mapped);
-    }
-  });
-}
 
 
 /** Default handler for when there is no route for a particular method
@@ -221,7 +183,7 @@ function queryUrl(req, query={}) {
  */
 function addSelfLinks(req, obj, id=undefined) {
   const baseUrl = requestUrl(req);
-  const href = (id) ? `${baseUrl}/${obj[id]}` : baseUrl;
+  const href = (id) ? `${baseUrl}/${obj.id}` : baseUrl;
   const links = [ { rel: 'self', name: 'self', href } ];
   return {result: obj,  links: links };
 }

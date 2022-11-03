@@ -32,7 +32,7 @@ export default async function main(args) {
     }
     const services = makeContactsServices(dao);
     const serveResult = await serve(services, base);
-    if (serveResult.hasErrors) panic(serveResult);
+    if (serveResult.errors) panic(serveResult);
     const app = serveResult.val;
     const serverOpts = {
       key: fs.readFileSync(config.https.keyPath),
@@ -86,7 +86,7 @@ async function loadContacts(services, userId, filePaths) {
 /****************************** Utilities ******************************/
 
 function panic(errResult) {
-  assert(errResult.hasErrors);
+  assert(errResult.errors);
   for (const err of errResult.errors) {
     console.error(err.message);
   }

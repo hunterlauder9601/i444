@@ -11,7 +11,7 @@ export default class {
     const uri = mongod.getUri();
     assert(mongod.instanceInfo, `mongo memory server startup failed`);
     const daoResult = await makeContactsDao(uri);
-    if (daoResult.hasErrors) throw daoResult;
+    if (daoResult.errors) throw daoResult;
     const dao = daoResult.val;
     dao._mongod = mongod;
     return dao;

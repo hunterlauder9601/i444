@@ -33,6 +33,9 @@ function setupRoutes(app) {
   app.delete(`${base}/:USER_ID/:CONTACT_ID`, deleteContact(app));
   //update contact
   app.patch(`${base}/:USER_ID/:CONTACT_ID`, updateContact(app));
+  //search contacts
+  app.get(`${base}/:USER_ID`, searchContacts(app));
+
   if (true) { //make true to see incoming requests
     app.use((req, res, next) => {
       console.log(req.method, requestUrl(req));
@@ -63,7 +66,6 @@ function readContact(app) {
       const result = await app.locals.model.read({userId: req.params.USER_ID, id: req.params.CONTACT_ID});
       if (result.errors) throw result;
       const { userId, id} = result.val;
-      //res.location(`${userId}/${id}`);
       const selfLink = addSelfLinks(req, result.val);
       res.json(selfLink);
     }
@@ -91,6 +93,35 @@ function readContact(app) {
 //         ],
 //     }
 // The NextLink should be present only if there are further results for the specified query parameters and PrevLink should be present only if there are previous results for the specified query parameters.
+
+function searchContacts(app) {
+  return (async function(req, res) {
+    try {
+      const q = { ...req.query };
+      console.log(q);
+      if (q.index === undefined) q.index = 0;
+      if (q.count === undefined) q.count = DEFAULT_COUNT;
+      //by getting one extra result, we ensure that we generate the
+      //next link only if there are more than count remaining results
+      q.count++;
+      const query = {userId: req.params.USER_ID};
+      const tags = {id: q.id, prefix: q.prefix, email: q.email, index: q.index, count: q.count};
+      for(const prop in tags) {
+        if(tags[prop] !== undefined) {
+          query[prop] = tags[prop];
+        }
+      }
+      const result = await app.locals.model.search(query);
+      if (result.errors) throw result;
+      res.json(addPagingLinks(req, result.val, 'id'));
+    }
+    catch(err) {
+      const mapped = mapResultErrors(err);
+      res.status(mapped.status).json(mapped);
+    }
+  });
+}
+
 
 // POST /contacts/USER_ID
 // The JSON body of the request must be a contact of the form:

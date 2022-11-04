@@ -98,7 +98,6 @@ function searchContacts(app) {
   return (async function(req, res) {
     try {
       const q = { ...req.query };
-      console.log(q);
       if (q.index === undefined) q.index = 0;
       if (q.count === undefined) q.count = DEFAULT_COUNT;
       //by getting one extra result, we ensure that we generate the
@@ -133,12 +132,12 @@ function searchContacts(app) {
 function createContact(app) {
   return (async function(req, res) {
     try {
-      const userInfo = req.body;
-      userInfo.userId = req.params.USER_ID;
-      const result = await app.locals.model.create(userInfo);
+      const contact = req.body;
+      contact.userId = req.params.USER_ID;
+      const result = await app.locals.model.create(contact);
       if (result.errors) throw result;
-      userInfo.id = result.val;
-      const selfLink = addSelfLinks(req, userInfo, 'id');
+      contact.id = result.val;
+      const selfLink = addSelfLinks(req, contact, 'id');
       res.location(selfLink.links[0].href);
       res.status(STATUS.CREATED).end();
     }
@@ -161,7 +160,6 @@ function updateContact(app) {
     try {
       const contact = await app.locals.model.read({userId: req.params.USER_ID, id: req.params.CONTACT_ID});
       if (contact.errors) throw contact;
-      console.log(req.body);
       const {name, emails, addr, phones, notes, info} = req.body;
       const updates = {name, emails, addr, phones, notes, info};
       const newContact = {...contact.val};

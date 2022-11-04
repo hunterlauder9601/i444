@@ -36,7 +36,7 @@ function setupRoutes(app) {
   //search contacts
   app.get(`${base}/:USER_ID`, searchContacts(app));
 
-  if (true) { //make true to see incoming requests
+  if (false) { //make true to see incoming requests
     app.use((req, res, next) => {
       console.log(req.method, requestUrl(req));
       next();

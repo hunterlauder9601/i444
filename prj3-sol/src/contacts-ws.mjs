@@ -138,7 +138,7 @@ function createContact(app) {
       if (result.errors) throw result;
       contact.id = result.val;
       const selfLink = addSelfLinks(req, contact, 'id');
-      res.location(selfLink.links[0].href);
+      res.set('Location', selfLink.links[0].href);
       res.status(STATUS.CREATED).end();
     }
     catch(err) {

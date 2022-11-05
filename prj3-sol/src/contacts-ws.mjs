@@ -65,9 +65,7 @@ function readContact(app) {
     try {
       const result = await app.locals.model.read({userId: req.params.USER_ID, id: req.params.CONTACT_ID});
       if (result.errors) throw result;
-      const { userId, id} = result.val;
-      const selfLink = addSelfLinks(req, result.val);
-      res.json(selfLink);
+      res.json(addSelfLinks(req, result.val));
     }
     catch(err) {
       const mapped = mapResultErrors(err);

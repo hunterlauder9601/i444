@@ -15,6 +15,7 @@ class SearchWidget extends HTMLElement {
     const shadow = this.shadow = this.attachShadow({mode: "closed"});
     let template = document.querySelector('#search-widget');
     shadow.appendChild(template.content.cloneNode(true));
+    this.resultElem = template.content.querySelector('li.result');
   }
 
   connectedCallback() {
@@ -36,8 +37,27 @@ class SearchWidget extends HTMLElement {
       labelElem.textContent = this.label;
     }
 
+
     this.shadow.querySelector('input#search').addEventListener('input', (ev) => {
-      console.log(ev.target.value);
+      const searchUrl = new URL(this.wsUrl);
+      searchUrl.searchParams.set("prefix", ev.target.value);
+      this.currentUrl = searchUrl.href;
+      doFetchJson('get', this.currentUrl).then(e => {
+        if(e.val) {
+          const results = this.shadow.querySelector('#results');
+          results.innerText = '';
+          const errors = this.shadow.querySelector('#errors');
+          errors.innerText = '';
+          e.val.result.forEach(contact => {
+            const clonedElem = this.resultElem.cloneNode(true);
+            const newWidget = document.createElement(this.resultWidget);
+            newWidget.setResult(contact.result);
+            clonedElem.prepend(newWidget);
+            results.appendChild(clonedElem);
+          })
+        }
+      });
+
     })
 
   }

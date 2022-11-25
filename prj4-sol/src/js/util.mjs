@@ -14,4 +14,28 @@ import { Result, okResult, errResult } from 'cs544-js-utils';
  */
 export async function doFetchJson(method, url, jsonBody=undefined) {
   //TODO
+  try {
+    let response;
+    if(jsonBody !== undefined){
+      response = 
+        await fetch(url, { method: method, body: JSON.stringify(jsonBody)} );
+    } else {
+      response = 
+        await fetch(url, { method: method} );
+    }
+    if(Number(response.headers.get("content-length")) > 0) {
+      const data = await response.json();
+      if (data.errors) {
+        return errResult(new Result(null, data.errors));
+      }
+      else {
+        return okResult(data);
+      }
+    } else {
+      return okResult(undefined);
+    }
+  }
+  catch (err) {
+    return errResult(err);
+  }
 }

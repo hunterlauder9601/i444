@@ -40,11 +40,14 @@ class SearchWidget extends HTMLElement {
       const labelElem = this.shadow.querySelector('slot[name="label"]');
       labelElem.textContent = this.label;
     }
-
+    const initUrl = new URL(this.wsUrl);
+    initUrl.searchParams.set(this.queryParam, "");
+    this.currentUrl = initUrl.href;
+    this.#populate(this.currentUrl);
 
     this.shadow.querySelector('input#search').addEventListener('input', (ev) => {
       const searchUrl = new URL(this.wsUrl);
-      searchUrl.searchParams.set("prefix", ev.target.value);
+      searchUrl.searchParams.set(this.queryParam, ev.target.value);
       this.currentUrl = searchUrl.href;
       this.#populate(this.currentUrl);
     })
@@ -63,28 +66,39 @@ class SearchWidget extends HTMLElement {
   #populate(url){
       doFetchJson('get', url).then(e => {
         if(e.val) {
-          console.log(e.val);
+          //console.log(e.val);
           const results = this.shadow.querySelector('#results');
           results.innerText = '';
           const errors = this.shadow.querySelector('#errors');
           errors.innerText = '';
           this.prevUrl = e.val.links.find(link => link.name === "prev");
-          console.log(this.prevUrl)
+          //console.log(this.prevUrl)
           this.nextUrl = e.val.links.find(link => link.name === "next");
-          console.log(this.nextUrl)
+          //console.log(this.nextUrl)
           this.#pageButtons();
           e.val.result.forEach(contact => {
             const clonedElem = this.resultElem.cloneNode(true);
             const newWidget = document.createElement(this.resultWidget);
             newWidget.setResult(contact.result);
             clonedElem.prepend(newWidget);
+            const deleteButton = clonedElem.querySelector('div.delete a');
+            //console.log(contact)
+            const selfUrl = contact.links.find(link => link.name === "self").href;
+            this.#addDelete(selfUrl, deleteButton);
+            //console.log(deleteButton)
             results.appendChild(clonedElem);
           })
         }
       })
   }
+  #addDelete(selfUrl, elem) {
+    elem.addEventListener("click", (event) => {
+      event.preventDefault();
+      doFetchJson('delete', selfUrl).then(() => this.#populate(this.currentUrl));
+    }, false);
+  }
   #prev(event) {
-    console.log(this.prevUrl)
+    //console.log(this.prevUrl)
     if(this.prevUrl !== undefined) {
       this.#populate(this.prevUrl.href);
     }
@@ -92,7 +106,7 @@ class SearchWidget extends HTMLElement {
   }
 
   #next(event) {
-    console.log(this.nextUrl)
+    //console.log(this.nextUrl)
     if(this.nextUrl !== undefined) {
       this.#populate(this.nextUrl.href);
     }

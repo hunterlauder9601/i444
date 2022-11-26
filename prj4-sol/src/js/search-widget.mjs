@@ -16,6 +16,10 @@ class SearchWidget extends HTMLElement {
     let template = document.querySelector('#search-widget');
     shadow.appendChild(template.content.cloneNode(true));
     this.resultElem = template.content.querySelector('li.result');
+    const prevButtons = shadow.querySelectorAll('slot[name="prev"]');
+    const nextButtons = shadow.querySelectorAll('slot[name="next"]');
+    prevButtons.forEach(b => b.addEventListener("click", this.#prev.bind(this), false));
+    nextButtons.forEach(b => b.addEventListener("click", this.#next.bind(this), false));
   }
 
   connectedCallback() {
@@ -25,11 +29,11 @@ class SearchWidget extends HTMLElement {
     }
     this.queryParam = this.getAttribute('query-param');
     if(this.queryParam === null || this.queryParam === "") {
-      console.log("error: missing queryParam attribute");
+      console.log("error: missing query-param attribute");
     }
     this.resultWidget = this.getAttribute('result-widget');
     if(this.resultWidget === null || this.resultWidget === "") {
-      console.log("error: missing resultWidget attribute");
+      console.log("error: missing result-widget attribute");
     }
     this.label = this.getAttribute('label');
     if(this.resultWidget !== null && this.resultWidget !== "") {
@@ -42,12 +46,33 @@ class SearchWidget extends HTMLElement {
       const searchUrl = new URL(this.wsUrl);
       searchUrl.searchParams.set("prefix", ev.target.value);
       this.currentUrl = searchUrl.href;
-      doFetchJson('get', this.currentUrl).then(e => {
+      this.#populate(this.currentUrl);
+    })
+
+  }
+
+  #pageButtons() {
+    const scrollers = this.shadow.querySelectorAll('div.scroll');
+    if(this.prevUrl === undefined && this.nextUrl === undefined) {
+      scrollers.forEach(elem => elem.style.visibility = 'hidden');
+    } else {
+      scrollers.forEach(elem => elem.style.visibility = 'visible');
+    }
+  }
+
+  #populate(url){
+      doFetchJson('get', url).then(e => {
         if(e.val) {
+          console.log(e.val);
           const results = this.shadow.querySelector('#results');
           results.innerText = '';
           const errors = this.shadow.querySelector('#errors');
           errors.innerText = '';
+          this.prevUrl = e.val.links.find(link => link.name === "prev");
+          console.log(this.prevUrl)
+          this.nextUrl = e.val.links.find(link => link.name === "next");
+          console.log(this.nextUrl)
+          this.#pageButtons();
           e.val.result.forEach(contact => {
             const clonedElem = this.resultElem.cloneNode(true);
             const newWidget = document.createElement(this.resultWidget);
@@ -56,10 +81,22 @@ class SearchWidget extends HTMLElement {
             results.appendChild(clonedElem);
           })
         }
-      });
+      })
+  }
+  #prev(event) {
+    console.log(this.prevUrl)
+    if(this.prevUrl !== undefined) {
+      this.#populate(this.prevUrl.href);
+    }
+    event.preventDefault();
+  }
 
-    })
-
+  #next(event) {
+    console.log(this.nextUrl)
+    if(this.nextUrl !== undefined) {
+      this.#populate(this.nextUrl.href);
+    }
+    event.preventDefault();
   }
 
   //TODO: add private methods  

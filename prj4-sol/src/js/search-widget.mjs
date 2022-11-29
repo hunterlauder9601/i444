@@ -105,7 +105,7 @@ class SearchWidget extends HTMLElement {
         }
       })
   }
-  async #addDelete(selfUrl, elem) {
+  #addDelete(selfUrl, elem) {
     elem.addEventListener("click", (event) => {
       event.preventDefault();
       doFetchJson('delete', selfUrl).then((e) => {

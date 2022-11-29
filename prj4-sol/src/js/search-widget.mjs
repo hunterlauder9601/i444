@@ -55,11 +55,21 @@ class SearchWidget extends HTMLElement {
   }
 
   #pageButtons() {
-    const scrollers = this.shadow.querySelectorAll('div.scroll');
-    if(this.prevUrl === undefined && this.nextUrl === undefined) {
-      scrollers.forEach(elem => elem.style.visibility = 'hidden');
+    const prevButtons = this.shadow.querySelectorAll('slot[name="prev"]');
+    const nextButtons = this.shadow.querySelectorAll('slot[name="next"]');
+    //const scrollers = this.shadow.querySelectorAll('div.scroll');
+    if(this.prevUrl !== undefined && this.nextUrl !== undefined) {
+      prevButtons.forEach(elem => elem.style.visibility = 'visible');
+      nextButtons.forEach(elem => elem.style.visibility = 'visible');
+    } else if(this.prevUrl === undefined && this.nextUrl !== undefined){
+      prevButtons.forEach(elem => elem.style.visibility = 'hidden');
+      nextButtons.forEach(elem => elem.style.visibility = 'visible');
+    } else if(this.prevUrl !== undefined && this.nextUrl === undefined){
+      prevButtons.forEach(elem => elem.style.visibility = 'visible');
+      nextButtons.forEach(elem => elem.style.visibility = 'hidden');
     } else {
-      scrollers.forEach(elem => elem.style.visibility = 'visible');
+      prevButtons.forEach(elem => elem.style.visibility = 'hidden');
+      nextButtons.forEach(elem => elem.style.visibility = 'hidden');
     }
   }
 
@@ -88,13 +98,24 @@ class SearchWidget extends HTMLElement {
             //console.log(deleteButton)
             results.appendChild(clonedElem);
           })
+        } else {
+          const errorElem = this.shadow.querySelector('#errors');
+          // console.log(e)
+          errorElem.append(e.errors[0].message);
         }
       })
   }
-  #addDelete(selfUrl, elem) {
+  async #addDelete(selfUrl, elem) {
     elem.addEventListener("click", (event) => {
       event.preventDefault();
-      doFetchJson('delete', selfUrl).then(() => this.#populate(this.currentUrl));
+      doFetchJson('delete', selfUrl).then((e) => {
+        if(e.errors) {
+          const errorElem = this.shadow.querySelector('#errors');
+          errorElem.append(e.errors[0].message);
+        } else {
+          this.#populate(this.currentUrl);
+        }
+      })
     }, false);
   }
   #prev(event) {

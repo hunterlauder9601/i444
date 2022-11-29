@@ -18,15 +18,15 @@ export async function doFetchJson(method, url, jsonBody=undefined) {
     let response;
     if(jsonBody !== undefined){
       response = 
-        await fetch(url, { method: method, body: JSON.stringify(jsonBody)} );
+        await fetch(url, { method: method, headers: {'Content-Type': 'application/json'}, body: JSON.stringify(jsonBody) } );
     } else {
       response = 
-        await fetch(url, { method: method} );
+        await fetch(url, { method: method } );
     }
     if(Number(response.headers.get("content-length")) > 0) {
       const data = await response.json();
       if (data.errors) {
-        return errResult(new Result(null, data.errors));
+        return new Result(null, data.errors);
       }
       else {
         return okResult(data);

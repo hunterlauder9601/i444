@@ -54,11 +54,13 @@ class SearchWidget extends HTMLElement {
 
   }
 
-  #pageButtons() {
+  #pageButtons(err=false) {
     const prevButtons = this.shadow.querySelectorAll('slot[name="prev"]');
     const nextButtons = this.shadow.querySelectorAll('slot[name="next"]');
-    //const scrollers = this.shadow.querySelectorAll('div.scroll');
-    if(this.prevUrl !== undefined && this.nextUrl !== undefined) {
+    if(err || (this.prevUrl === undefined && this.nextUrl === undefined)) {
+      prevButtons.forEach(elem => elem.style.visibility = 'hidden');
+      nextButtons.forEach(elem => elem.style.visibility = 'hidden');
+    } else if(this.prevUrl !== undefined && this.nextUrl !== undefined) {
       prevButtons.forEach(elem => elem.style.visibility = 'visible');
       nextButtons.forEach(elem => elem.style.visibility = 'visible');
     } else if(this.prevUrl === undefined && this.nextUrl !== undefined){
@@ -67,25 +69,22 @@ class SearchWidget extends HTMLElement {
     } else if(this.prevUrl !== undefined && this.nextUrl === undefined){
       prevButtons.forEach(elem => elem.style.visibility = 'visible');
       nextButtons.forEach(elem => elem.style.visibility = 'hidden');
-    } else {
-      prevButtons.forEach(elem => elem.style.visibility = 'hidden');
-      nextButtons.forEach(elem => elem.style.visibility = 'hidden');
     }
   }
 
   #populate(url){
       doFetchJson('get', url).then(e => {
+        const results = this.shadow.querySelector('#results');
+        const errors = this.shadow.querySelector('#errors');
         if(e.val) {
           //console.log(e.val);
-          const results = this.shadow.querySelector('#results');
           results.innerText = '';
-          const errors = this.shadow.querySelector('#errors');
           errors.innerText = '';
           this.prevUrl = e.val.links.find(link => link.name === "prev");
           //console.log(this.prevUrl)
           this.nextUrl = e.val.links.find(link => link.name === "next");
           //console.log(this.nextUrl)
-          this.#pageButtons();
+          this.#pageButtons(false);
           e.val.result.forEach(contact => {
             const clonedElem = this.resultElem.cloneNode(true);
             const newWidget = document.createElement(this.resultWidget);
@@ -99,9 +98,10 @@ class SearchWidget extends HTMLElement {
             results.appendChild(clonedElem);
           })
         } else {
-          const errorElem = this.shadow.querySelector('#errors');
-          // console.log(e)
-          errorElem.append(e.errors[0].message);
+          this.#pageButtons(true);
+          errors.innerText = '';
+          results.innerText = '';
+          errors.append(e.errors[0].message);
         }
       })
   }
@@ -110,8 +110,12 @@ class SearchWidget extends HTMLElement {
       event.preventDefault();
       doFetchJson('delete', selfUrl).then((e) => {
         if(e.errors) {
-          const errorElem = this.shadow.querySelector('#errors');
-          errorElem.append(e.errors[0].message);
+          this.#pageButtons(true);
+          const results = this.shadow.querySelector('#results');
+          const errors = this.shadow.querySelector('#errors');
+          errors.innerText = '';
+          results.innerText = '';
+          errors.append(e.errors[0].message);
         } else {
           this.#populate(this.currentUrl);
         }
@@ -121,6 +125,7 @@ class SearchWidget extends HTMLElement {
   #prev(event) {
     //console.log(this.prevUrl)
     if(this.prevUrl !== undefined) {
+      this.currentUrl = this.prevUrl.href;
       this.#populate(this.prevUrl.href);
     }
     event.preventDefault();
@@ -129,6 +134,7 @@ class SearchWidget extends HTMLElement {
   #next(event) {
     //console.log(this.nextUrl)
     if(this.nextUrl !== undefined) {
+      this.currentUrl = this.nextUrl.href;
       this.#populate(this.nextUrl.href);
     }
     event.preventDefault();

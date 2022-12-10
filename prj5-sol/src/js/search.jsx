@@ -76,7 +76,8 @@ export default function Search(props) {
 
 // TODO: define sub-components here + other misc functions
 function Delete({result, setDelUrl, deleted}) {
-  function handleDelete() {
+  function handleDelete(ev) {
+    ev.preventDefault();
     deleted.current = false;
     setDelUrl(getLink(result.links, 'self'));
   }

@@ -24,11 +24,11 @@ export default function Search(props) {
 
   useEffect(() => {
     if(delUrl !== '' && !deleted.current) {
-      doFetchJson('delete', delUrl).then(e => {
-        if(e.errors) {
-          setErrors(prev => [...prev, e.errors[0].message]);
+      doFetchJson('delete', delUrl).then(res => {
+        deleted.current = true;
+        if(res.errors) {
+          setErrors(prev => [...prev, res.errors[0].message]);
         } else {
-          deleted.current = true;
           doFetchJson('get', currentUrl).then(e => {
             if(e.val) {
               setPrevUrl(getLink(e.val.links, 'prev'));
